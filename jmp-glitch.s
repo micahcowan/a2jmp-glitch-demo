@@ -25,48 +25,37 @@
 
 .org $803
 Start:
-	lda #$0A
-        sta $08
+	; We store this byte at $800, because
+        ; the glitch is that jmp ($8FF) will
+        ; read the final destination, not from
+        ; $8FF and $900, but from $8FF and $800!
+	lda #>Glitched
+        sta $800
 	PrintStr_ ""
         PrintStr_ ""
 	PrintStr_ "HELLO, WORLD"
-        jmp TestJmp
-InfLoop:
-	jmp InfLoop
-Glitched:
-	PrintStr_ "HAHA! WE -GLITCHED- HERE!"
-        jmp InfLoop
-Boring:
-	PrintStr_ "THIS IS WHERE A DEV WOULD EXPECT TO BE."
-        PrintStr_ "BUT MAYBE TRY A GLITCH"
-        PrintStr_ " IN THE TARGET WORD..."
+        ; Our build environment (8bitworkshop) barfs at
+        ; jmp ($8FF), because it knows that's broken;
+        ; so instead we write the instruction as
+        ; jmp ($8F0), and then overwrite the relevant
+        ; byte so it becomes jmp ($8FF).
 	lda #$FF
         sta JmpInstr+1
 JmpInstr:
-        jmp ($CF0)
+        jmp ($8F0)	; really ($8FF)!
         jmp InfLoop
-Boring2:
-	PrintStr_ "NOPE, THAT WAS BORING TOO."
+InfLoop:
+	jmp InfLoop
+Boring:
+	PrintStr_ "THIS IS WHERE A DEV WOULD EXPECT TO BE."
         jmp InfLoop
-	
-
-.res $9FE - *
-TestJmp:
-	jmp ($0B40)
-
-.res $A40 - *
-	.word Glitched
-
-.res $B40 - *
+        
+; ".org $8FF"
+.res $8FF - *
 	.word Boring
 
-.res $C00 - *
-	.byte >Glitched2
-        
-.res $CFF - *
-	.word Boring2
-
-.res $E00 - * + <Boring2
-Glitched2:
-	PrintStr_ "HAHA! WE GLITCHED SECOND ONE!"
+; ".org $A00"
+.res $A00 - * + <Boring
+Glitched:
+	PrintStr_ "HAHA! WE -GLITCHED- HERE!"
         jmp InfLoop
